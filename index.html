@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subnetting Practice</title>
+<style>
+  :root{
+    --paper:#f7f9fb;
+    --grid:#dbe6f0;
+    --ink:#182430;
+    --ink-soft:#5a6b7b;
+    --line:#b9c7d4;
+    --blue:#2f5d8a;
+    --blue-soft:#eaf1f8;
+    --amber:#b5741f;
+    --ok:#2e7d4f;
+    --ok-bg:#e7f4ec;
+    --bad:#c0392b;
+    --bad-bg:#fbeae8;
+    --box:27px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink);
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:26px 26px;
+    padding:28px 20px 60px;
+    line-height:1.4;
+  }
+  .sheet{
+    max-width:1160px;margin:0 auto;background:#fff;
+    border:1px solid var(--line);
+    box-shadow:0 1px 0 #fff inset,0 10px 30px rgba(24,36,48,.08);
+    padding:26px 30px 30px;
+  }
+  .titlebar{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:18px;
+    flex-wrap:wrap;gap:8px;}
+  h1{font-size:22px;letter-spacing:.5px;margin:0;font-weight:700;}
+  h1 .sub{display:block;font-size:12px;font-weight:500;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--blue);margin-top:3px;}
+  .stat{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+    color:var(--ink-soft);text-align:right;}
+  .stat b{color:var(--ink);}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:22px;}
+  select,button{font-family:inherit;font-size:14px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);border-radius:6px;padding:8px 12px;cursor:pointer;}
+  select{padding:7px 10px;}
+  button:hover{border-color:var(--blue);}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;}
+  button.primary:hover{background:#264c72;}
+  button.ghost{background:transparent;}
+  .spacer{flex:1;}
+
+  .given{display:flex;gap:26px;flex-wrap:wrap;background:var(--blue-soft);
+    border:1px solid #cfe0ef;border-radius:8px;padding:14px 18px;margin-bottom:24px;}
+  .given .field{display:flex;flex-direction:column;gap:2px;}
+  .given .lbl{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--blue);}
+  .given .val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:600;}
+
+  .placeref{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;
+    color:var(--ink-soft);}
+
+  .gridwrap{overflow-x:auto;padding-bottom:6px;}
+  .rowgrid{min-width:1040px;}
+
+  .octet-header{display:flex;align-items:flex-end;margin:0 0 4px 112px;}
+  .oh-group{display:flex;margin-right:22px;}
+  .oh-group:last-child{margin-right:0;}
+  .oh-cell{width:var(--box);text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:9px;color:var(--ink-soft);line-height:1.25;}
+  .oh-cell .pw{display:block;font-size:8px;color:#9aabb9;}
+
+  .binrow{display:flex;align-items:center;margin-bottom:6px;}
+  .rowlabel{width:112px;padding-right:8px;text-align:right;font-size:12px;
+    color:var(--ink);font-weight:600;flex:0 0 112px;}
+  .rowlabel small{display:block;font-weight:400;color:var(--ink-soft);font-size:10px;}
+  .octets{display:flex;align-items:center;}
+  .octet{display:flex;}
+  .dot{width:22px;text-align:center;font-weight:800;font-size:20px;color:var(--ink);}
+  .bit{width:var(--box);height:var(--box);text-align:center;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;
+    border:1px solid var(--line);border-right:none;background:#fff;color:var(--ink);
+    padding:0;outline:none;}
+  .octet .bit:last-child{border-right:1px solid var(--line);}
+  #row-mask .bit.net-net, #row-net .bit.net-net, #row-bcast .bit.net-net{background:#d4efdc;}
+  #row-mask .bit.net-host, #row-net .bit.net-host, #row-bcast .bit.net-host{background:#f6d8d4;}
+  .bit:focus{background:#fff8e6;box-shadow:inset 0 0 0 2px var(--amber);position:relative;z-index:2;}
+  .bit.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);}
+  .bit.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);box-shadow:inset 0 0 0 2px var(--bad);}
+  .bit.mask-fixed{background:#f1f5f9;}
+
+  .andgate{display:flex;align-items:center;margin:2px 0 8px 112px;gap:10px;color:var(--amber);}
+  .andgate .sym{font-weight:800;letter-spacing:2px;font-size:13px;
+    border:1px dashed var(--amber);border-radius:5px;padding:2px 8px;}
+  .andgate .rules{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--ink-soft);}
+
+  .divider{border:none;border-top:1px dashed var(--line);margin:16px 0;}
+
+  .keybar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;
+    margin-top:16px;background:#f6f9fc;border:1px solid #dbe6f0;border-radius:8px;padding:12px 18px;}
+  .legend{display:flex;gap:22px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin:0;}
+  .legend .lg{display:flex;align-items:center;gap:7px;}
+  .legend .sw{width:15px;height:15px;border:1px solid var(--line);border-radius:3px;display:inline-block;}
+  .legend .sw-net{background:#d4efdc;}
+  .legend .sw-host{background:#f6d8d4;}
+  .cidr{display:flex;align-items:baseline;gap:10px;}
+  .cidr-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--blue);}
+  .cidr-num{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:26px;font-weight:700;
+    color:var(--blue);line-height:1;}
+  .cidr-detail{font-size:11px;color:var(--ink-soft);}
+
+  .mathbar{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+  .mstat{flex:1 1 130px;min-width:120px;background:#fff;border:1px solid var(--line);border-radius:8px;
+    padding:10px 14px;display:flex;flex-direction:column;gap:5px;}
+  .mstat.usable{border-color:var(--blue);background:var(--blue-soft);}
+  .ms-label{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-soft);}
+  .ms-label em{font-style:normal;text-transform:none;letter-spacing:0;color:var(--blue);font-weight:600;font-size:11px;}
+  .ms-val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;color:var(--ink);}
+  .mstat.usable .ms-val{color:var(--blue);}
+  .ms-val sup{font-size:.72em;}
+
+  .answers{display:flex;gap:30px;flex-wrap:wrap;margin-top:8px;}
+  .ans{display:flex;flex-direction:column;gap:4px;}
+  .ans .lbl{font-size:12px;font-weight:600;}
+  .ans input{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;
+    border:none;border-bottom:2px solid var(--ink);background:transparent;padding:4px 2px;
+    width:190px;outline:none;color:var(--ink);}
+  .ans input:focus{border-color:var(--amber);}
+  .ans input.ok{color:var(--ok);border-color:var(--ok);}
+  .ans input.bad{color:var(--bad);border-color:var(--bad);}
+  .ans-status{display:block;margin-top:6px;font-size:12.5px;font-weight:600;min-height:17px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .ans-status.ok{color:var(--ok);}
+  .ans-status.bad{color:var(--bad);}
+  .ans .lbl em{font-style:normal;font-weight:400;color:var(--ink-soft);font-size:11px;}
+  .ans input.auto{background:#f6f9fc;cursor:default;}
+
+  .feedback{margin-top:22px;padding:12px 16px;border-radius:8px;font-size:14px;
+    display:none;}
+  .feedback.show{display:block;}
+  .feedback.pass{background:var(--ok-bg);border:1px solid var(--ok);color:var(--ok);}
+  .feedback.fail{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad);}
+
+  details.steps{margin-top:26px;border:1px solid var(--line);border-radius:8px;padding:0 16px;}
+  details.steps summary{cursor:pointer;padding:12px 0;font-weight:600;font-size:13px;
+    letter-spacing:.5px;text-transform:uppercase;color:var(--blue);list-style-position:inside;}
+  details.steps ol{margin:0 0 14px;padding-left:20px;font-size:13px;color:var(--ink);}
+  details.steps li{margin-bottom:6px;}
+  details.steps code{background:#f1f5f9;padding:1px 5px;border-radius:4px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
+  .footnote{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:22px;}
+
+  @media (max-width:640px){
+    body{padding:14px 8px 40px;}
+    .sheet{padding:18px 12px;}
+    .rowlabel{font-size:11px;}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="titlebar">
+    <h1>Subnetting Practice<span class="sub">Network &amp; Broadcast Address · Decimal auto-fills from binary</span></h1>
+    <div class="stat">Solved: <b id="solvedCount">0</b> &nbsp;·&nbsp; Streak: <b id="streakCount">0</b></div>
+  </div>
+
+  <div class="toolbar">
+    <label style="font-size:13px;color:var(--ink-soft);">Difficulty</label>
+    <select id="difficulty">
+      <option value="easy">Easy — /24–/28</option>
+      <option value="medium" selected>Medium — /17–/30</option>
+      <option value="hard">Hard — /9–/30</option>
+    </select>
+    <button id="newBtn">New scenario</button>
+    <div class="spacer"></div>
+    <button class="ghost" id="revealBtn">Reveal answers</button>
+    <button class="primary" id="checkBtn">Check my work</button>
+  </div>
+
+  <div class="given">
+    <div class="field"><span class="lbl">IP Address</span><span class="val" id="givenIp">—</span></div>
+    <div class="field"><span class="lbl">Subnet Mask</span><span class="val" id="givenMask">—</span></div>
+  </div>
+
+  <div class="gridwrap">
+    <div class="rowgrid">
+      <div class="octet-header" id="octetHeader"></div>
+
+      <div class="binrow">
+        <div class="rowlabel">IP Address<small>binary</small></div>
+        <div class="octets" id="row-ip"></div>
+      </div>
+
+      <div class="binrow">
+        <div class="rowlabel">Subnet Mask<small>binary</small></div>
+        <div class="octets" id="row-mask"></div>
+      </div>
+
+      <div class="andgate">
+        <span class="sym">AND ↓</span>
+        <span class="rules">1&amp;1=1&nbsp;&nbsp;1&amp;0=0&nbsp;&nbsp;0&amp;0=0</span>
+      </div>
+
+      <div class="binrow">
+        <div class="rowlabel">Network Addr<small>= IP AND mask</small></div>
+        <div class="octets" id="row-net"></div>
+      </div>
+
+      <div class="binrow">
+        <div class="rowlabel">Broadcast Addr<small>host bits → 1</small></div>
+        <div class="octets" id="row-bcast"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="keybar">
+    <div class="legend">
+      <span class="lg"><i class="sw sw-net"></i>Network bits — mask = 1</span>
+      <span class="lg"><i class="sw sw-host"></i>Host bits — mask = 0</span>
+    </div>
+    <div class="cidr">
+      <span class="cidr-label">Your mask</span>
+      <span class="cidr-num" id="cidrVal">/0</span>
+      <span class="cidr-detail" id="cidrDetail">0 network · 32 host bits</span>
+    </div>
+  </div>
+
+  <div class="mathbar">
+    <div class="mstat"><span class="ms-label">Network bits</span><span class="ms-val" id="mNetBits">0</span></div>
+    <div class="mstat"><span class="ms-label">Host bits</span><span class="ms-val" id="mHostBits">32</span></div>
+    <div class="mstat"><span class="ms-label">Networks</span><span class="ms-val" id="mNetworks">—</span></div>
+    <div class="mstat"><span class="ms-label">Total hosts</span><span class="ms-val" id="mHosts">—</span></div>
+    <div class="mstat usable"><span class="ms-label">Usable hosts <em>= 2ⁿ − 2</em></span><span class="ms-val" id="mUsable">—</span></div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="answers">
+    <div class="ans">
+      <span class="lbl">Network Address (decimal) <em>auto-fills from your binary</em></span>
+      <input id="ansNet" class="auto" type="text" placeholder="___.___.___.___" readonly tabindex="-1">
+      <span class="ans-status" id="statusNet"></span>
+    </div>
+    <div class="ans">
+      <span class="lbl">Broadcast Address (decimal) <em>auto-fills from your binary</em></span>
+      <input id="ansBcast" class="auto" type="text" placeholder="___.___.___.___" readonly tabindex="-1">
+      <span class="ans-status" id="statusBcast"></span>
+    </div>
+  </div>
+
+  <div class="feedback" id="feedback"></div>
+
+  <details class="steps">
+    <summary>Method — how to work it out</summary>
+    <ol>
+      <li>Convert the <b>IP</b> and <b>subnet mask</b> to binary using the place values <code>128 64 32 16 8 4 2 1</code>.</li>
+      <li>Logical <b>AND</b> the two rows to get the <b>Network Address</b> &nbsp;(<code>1&amp;1=1</code>, <code>1&amp;0=0</code>, <code>0&amp;0=0</code>).</li>
+      <li>Copy the Network Address down and set every <b>host bit</b> (where the mask is 0) to <b>1</b> — that's the <b>Broadcast Address</b>.</li>
+      <li>Convert both results back to decimal.</li>
+    </ol>
+  </details>
+
+  <div class="footnote">Type <b>0</b> or <b>1</b> in each box — it auto-advances, and the decimal addresses below add up bit by bit as you enter them. Press <b>Enter</b> to check.</div>
+</div>
+
+<script>
+(function(){
+  const rows = {
+    ip:    document.getElementById('row-ip'),
+    mask:  document.getElementById('row-mask'),
+    net:   document.getElementById('row-net'),
+    bcast: document.getElementById('row-bcast'),
+  };
+  const octetHeader = document.getElementById('octetHeader');
+  const PLACE = [128,64,32,16,8,4,2,1];
+  const POW   = ['2\u2077','2\u2076','2\u2075','2\u2074','2\u00B3','2\u00B2','2\u00B9','2\u2070'];
+
+  let state = null; // {ip:[], mask:[], net:[], bcast:[]}  each = array of 4 octet decimals
+
+  // ---- build place-value header ----
+  for(let o=0;o<4;o++){
+    const g = document.createElement('div');
+    g.className='oh-group';
+    for(let b=0;b<8;b++){
+      const c=document.createElement('div');
+      c.className='oh-cell';
+      c.innerHTML = POW[b]+'<span class="pw">'+PLACE[b]+'</span>';
+      g.appendChild(c);
+    }
+    octetHeader.appendChild(g);
+  }
+
+  // ---- build the 4 binary rows of inputs ----
+  const bitEls = {}; // key -> [32 inputs]
+  Object.keys(rows).forEach(key=>{
+    const container = rows[key];
+    bitEls[key]=[];
+    for(let o=0;o<4;o++){
+      const oct=document.createElement('div');
+      oct.className='octet';
+      for(let b=0;b<8;b++){
+        const inp=document.createElement('input');
+        inp.className='bit';
+        inp.maxLength=1;
+        inp.dataset.key=key;
+        inp.dataset.idx=(o*8+b);
+        oct.appendChild(inp);
+        bitEls[key].push(inp);
+      }
+      container.appendChild(oct);
+      if(o<3){
+        const dot=document.createElement('span');
+        dot.className='dot';dot.textContent='.';
+        container.appendChild(dot);
+      }
+    }
+  });
+
+  const allBits = [].concat(bitEls.ip,bitEls.mask,bitEls.net,bitEls.bcast);
+
+  // ---- input behaviour: only 0/1, auto-advance ----
+  allBits.forEach((inp,i)=>{
+    inp.addEventListener('input',()=>{
+      const key=inp.dataset.key, idx=+inp.dataset.idx;
+      const v=inp.value.replace(/[^01]/g,'').slice(-1);
+      inp.value=v;
+      inp.classList.remove('ok','bad');
+      if(key==='mask'){
+        // shade the mask, network + broadcast cells: green for a 1 (network bit), red for a 0 (host bit)
+        ['mask','net','bcast'].forEach(r=>{
+          const cell=bitEls[r][idx];
+          cell.classList.remove('net-net','net-host');
+          if(v==='1') cell.classList.add('net-net');
+          else if(v==='0') cell.classList.add('net-host');
+        });
+        updateCidr();
+      }
+      if(key==='net' || key==='bcast'){ updateDecimals(); }
+      if(v && idx<31){
+        // advance to next box within the same row
+        bitEls[key][idx+1].focus();
+      }
+    });
+    inp.addEventListener('keydown',e=>{
+      const key=inp.dataset.key, idx=+inp.dataset.idx;
+      if(e.key==='Backspace' && inp.value==='' && idx>0){
+        bitEls[key][idx-1].focus();
+      } else if(e.key==='ArrowRight' && idx<31){ bitEls[key][idx+1].focus(); e.preventDefault(); }
+      else if(e.key==='ArrowLeft' && idx>0){ bitEls[key][idx-1].focus(); e.preventDefault(); }
+      else if(e.key==='Enter'){ check(); }
+    });
+  });
+
+  document.getElementById('ansNet').addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+  document.getElementById('ansBcast').addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+
+  // ---- helpers ----
+  const toBin = dec => dec.toString(2).padStart(8,'0');
+  const octetsToBinArr = octs => octs.map(toBin).join('').split(''); // 32 chars
+
+  function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+
+  function syncNetworkShading(){
+    for(let i=0;i<32;i++){
+      const mv=bitEls.mask[i].value.trim();
+      ['mask','net','bcast'].forEach(r=>{
+        const cell=bitEls[r][i];
+        cell.classList.remove('net-net','net-host');
+        if(mv==='1') cell.classList.add('net-net');
+        else if(mv==='0') cell.classList.add('net-host');
+      });
+    }
+  }
+
+  function updateCidr(){
+    let ones=0;
+    for(let i=0;i<32;i++) if(bitEls.mask[i].value.trim()==='1') ones++;
+    const host=32-ones;
+    document.getElementById('cidrVal').textContent='/'+ones;
+    document.getElementById('cidrDetail').textContent=ones+' network · '+host+' host bits';
+    const fmt=n=>n.toLocaleString('en-US');
+    const usable=Math.max(0,Math.pow(2,host)-2);
+    document.getElementById('mNetBits').textContent=ones;
+    document.getElementById('mHostBits').textContent=host;
+    document.getElementById('mNetworks').innerHTML='2<sup>'+ones+'</sup> = '+fmt(Math.pow(2,ones));
+    document.getElementById('mHosts').innerHTML='2<sup>'+host+'</sup> = '+fmt(Math.pow(2,host));
+    document.getElementById('mUsable').innerHTML='2<sup>'+host+'</sup> \u2212 2 = '+fmt(usable);
+  }
+
+  function updateDecimals(){
+    ['net','bcast'].forEach(r=>{
+      const parts=[];
+      for(let o=0;o<4;o++){
+        let touched=false, val=0;
+        for(let b=0;b<8;b++){
+          const v=bitEls[r][o*8+b].value.trim();
+          if(v==='0' || v==='1'){ touched=true; if(v==='1') val+=PLACE[b]; }
+        }
+        parts.push(touched ? val : '___');
+      }
+      document.getElementById(r==='net'?'ansNet':'ansBcast').value=parts.join('.');
+    });
+  }
+
+  function prefixToMaskOctets(p){
+    const bits='1'.repeat(p)+'0'.repeat(32-p);
+    const o=[];
+    for(let i=0;i<4;i++) o.push(parseInt(bits.slice(i*8,i*8+8),2));
+    return o;
+  }
+
+  function generate(){
+    const diff=document.getElementById('difficulty').value;
+    let prefix;
+    if(diff==='easy')   prefix=randInt(24,28);
+    else if(diff==='hard') prefix=randInt(9,30);
+    else prefix=randInt(17,30);
+
+    // IP: sensible first octet, avoid 127 and multicast/reserved ranges
+    let a;
+    do{ a=randInt(1,223); }while(a===127);
+    const ip=[a,randInt(0,255),randInt(0,255),randInt(1,254)];
+    const mask=prefixToMaskOctets(prefix);
+
+    // network = ip AND mask ; broadcast = network OR (NOT mask)
+    const net=[],bcast=[];
+    for(let i=0;i<4;i++){
+      net.push(ip[i] & mask[i]);
+      bcast.push((ip[i] & mask[i]) | (~mask[i] & 255));
+    }
+
+    state={ip,mask,net,bcast,prefix};
+
+    document.getElementById('givenIp').textContent   = ip.join('.');
+    document.getElementById('givenMask').textContent = mask.join('.');
+
+    // clear the sheet
+    allBits.forEach(b=>{b.value='';b.classList.remove('ok','bad','net-net','net-host');});
+    ['ansNet','ansBcast'].forEach(id=>{
+      const el=document.getElementById(id); el.value=''; el.classList.remove('ok','bad');
+    });
+    ['statusNet','statusBcast'].forEach(id=>{
+      const s=document.getElementById(id); s.textContent=''; s.classList.remove('ok','bad');
+    });
+    hideFeedback();
+    updateCidr();
+    updateDecimals();
+    bitEls.ip[0].focus();
+  }
+
+  function expected(){
+    return {
+      ip:octetsToBinArr(state.ip),
+      mask:octetsToBinArr(state.mask),
+      net:octetsToBinArr(state.net),
+      bcast:octetsToBinArr(state.bcast),
+      netDec:state.net.join('.'),
+      bcastDec:state.bcast.join('.'),
+    };
+  }
+
+  function check(){
+    if(!state) return;
+    const exp=expected();
+    let wrong=0, blank=0, total=0;
+
+    ['ip','mask','net','bcast'].forEach(key=>{
+      bitEls[key].forEach((inp,i)=>{
+        total++;
+        const want=exp[key][i];
+        const got=inp.value.trim();
+        inp.classList.remove('ok','bad');
+        if(got===''){ blank++; inp.classList.add('bad'); }
+        else if(got===want){ inp.classList.add('ok'); }
+        else { wrong++; inp.classList.add('bad'); }
+      });
+    });
+
+    const netEl=document.getElementById('ansNet');
+    const bcEl =document.getElementById('ansBcast');
+    const normalize = s => s.trim().replace(/\s+/g,'');
+    [[netEl,exp.netDec,'statusNet','net'],[bcEl,exp.bcastDec,'statusBcast','bcast']].forEach(([el,want,sid,rk])=>{
+      total++;
+      el.classList.remove('ok','bad');
+      const st=document.getElementById(sid);
+      st.classList.remove('ok','bad');
+      const complete = bitEls[rk].every(x=>{ const t=x.value.trim(); return t==='0'||t==='1'; });
+      const got=normalize(el.value);
+      if(complete && got===want){
+        el.classList.add('ok'); st.classList.add('ok');
+        st.textContent='\u2713 Correct \u2014 '+want;
+      } else {
+        if(!complete) blank++; else wrong++;
+        el.classList.add('bad'); st.classList.add('bad');
+        st.textContent='\u2717 '+(!complete?'Incomplete':'Incorrect')+' \u2014 correct is '+want;
+      }
+    });
+
+    if(wrong===0 && blank===0){
+      showFeedback(true,'All correct — network '+exp.netDec+', broadcast '+exp.bcastDec+'. Nicely done.');
+      solved++; streak++; updateStats();
+    } else {
+      const bits=[];
+      if(wrong) bits.push(wrong+' incorrect');
+      if(blank) bits.push(blank+' still blank');
+      showFeedback(false,bits.join(' · ')+'. Red cells need another look — the method is under “Method” below.');
+      streak=0; updateStats();
+    }
+  }
+
+  function reveal(){
+    if(!state) return;
+    const exp=expected();
+    ['ip','mask','net','bcast'].forEach(key=>{
+      bitEls[key].forEach((inp,i)=>{ inp.value=exp[key][i]; inp.classList.remove('bad'); inp.classList.add('ok'); });
+    });
+    const netEl=document.getElementById('ansNet'), bcEl=document.getElementById('ansBcast');
+    netEl.value=exp.netDec; bcEl.value=exp.bcastDec;
+    netEl.classList.remove('bad'); bcEl.classList.remove('bad');
+    netEl.classList.add('ok'); bcEl.classList.add('ok');
+    const sN=document.getElementById('statusNet'), sB=document.getElementById('statusBcast');
+    sN.classList.remove('bad'); sN.classList.add('ok'); sN.textContent='\u2713 '+exp.netDec;
+    sB.classList.remove('bad'); sB.classList.add('ok'); sB.textContent='\u2713 '+exp.bcastDec;
+    syncNetworkShading();
+    updateCidr();
+    streak=0; updateStats();
+    showFeedback(true,'Answers filled in. Hit “New scenario” to try a fresh one.');
+  }
+
+  // ---- feedback + stats ----
+  const fb=document.getElementById('feedback');
+  function showFeedback(pass,msg){
+    fb.textContent=msg;
+    fb.className='feedback show '+(pass?'pass':'fail');
+  }
+  function hideFeedback(){ fb.className='feedback'; }
+
+  let solved=0, streak=0;
+  function updateStats(){
+    document.getElementById('solvedCount').textContent=solved;
+    document.getElementById('streakCount').textContent=streak;
+    // best-effort persistence; degrades silently if unavailable
+    try{ window.storage && window.storage.set('subnet_stats',JSON.stringify({solved})); }catch(e){}
+  }
+  (async function loadStats(){
+    try{
+      if(window.storage){
+        const r=await window.storage.get('subnet_stats');
+        if(r&&r.value){ const s=JSON.parse(r.value); solved=s.solved||0; updateStats(); }
+      }
+    }catch(e){}
+  })();
+
+  document.getElementById('newBtn').addEventListener('click',generate);
+  document.getElementById('checkBtn').addEventListener('click',check);
+  document.getElementById('revealBtn').addEventListener('click',reveal);
+  document.getElementById('difficulty').addEventListener('change',generate);
+
+  generate();
+})();
+</script>
+</body>
+</html>
