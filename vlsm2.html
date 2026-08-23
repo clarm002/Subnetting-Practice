@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLSM Practice</title>
+<style>
+  :root{
+    --paper:#f7f9fb; --grid:#dbe6f0; --ink:#182430; --ink-soft:#5a6b7b;
+    --line:#b9c7d4; --blue:#2f5d8a; --blue-soft:#eaf1f8; --amber:#b5741f;
+    --ok:#2e7d4f; --ok-bg:#e7f4ec; --bad:#c0392b; --bad-bg:#fbeae8;
+    --purple:#6a3fb5; --purple-bg:#ece3f7;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);
+    background:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:26px 26px;padding:18px 10px 50px;line-height:1.4;
+  }
+  .sheet{max-width:1180px;margin:0 auto;background:#fff;border:1px solid var(--line);
+    box-shadow:0 1px 0 #fff inset,0 10px 30px rgba(24,36,48,.08);padding:22px 18px 26px;}
+  .titlebar{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid var(--ink);
+    padding-bottom:10px;margin-bottom:18px;flex-wrap:wrap;gap:8px;}
+  h1{font-size:22px;letter-spacing:.5px;margin:0;font-weight:700;}
+  h1 .sub{display:block;font-size:12px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);margin-top:3px;}
+  .stat{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--ink-soft);text-align:right;}
+  .stat b{color:var(--ink);}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px;}
+  select,button{font-family:inherit;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:6px;padding:8px 12px;cursor:pointer;}
+  button:hover{border-color:var(--blue);}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600;}
+  button.primary:hover{background:#264c72;}
+  button.ghost{background:transparent;}
+  .spacer{flex:1;}
+  label.sel{font-size:13px;color:var(--ink-soft);}
+
+  .given{display:flex;gap:26px;flex-wrap:wrap;background:var(--blue-soft);border:1px solid #cfe0ef;border-radius:8px;padding:14px 18px;margin-bottom:22px;}
+  .given .field{display:flex;flex-direction:column;gap:4px;}
+  .given .field.grow{flex:1;min-width:280px;}
+  .given .lbl{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--blue);}
+  .given .val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:600;}
+  .reqlist{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{font-size:13px;background:#fff;border:1px solid #cfe0ef;border-radius:20px;padding:4px 12px;}
+  .chip b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .basemask{background:#fbfcfe;border:1px solid #dbe6f0;border-radius:8px;padding:12px 16px;margin-bottom:22px;}
+  .bm-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:9px;}
+  .bm-legend{display:flex;gap:14px;font-size:11px;color:var(--ink-soft);}
+  .bm-legend .lg{display:flex;align-items:center;gap:5px;}
+  .bm-legend .sw{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid var(--line);}
+  .sw-net{background:var(--ok-bg);}
+  .sw-host{background:var(--bad-bg);}
+  .sw-sub{background:var(--purple-bg);}
+  .bm-body{display:flex;align-items:center;flex-wrap:wrap;gap:12px;}
+  .mbit.bm-net{background:var(--ok-bg);color:var(--ok);}
+  input.mbit.bm-host{background:var(--bad-bg);color:var(--bad);}
+  input.mbit.bm-sub{background:var(--purple-bg);color:var(--purple);font-weight:700;}
+
+  .tablewrap{overflow-x:auto;padding-bottom:4px;}
+  table.vlsm{border-collapse:collapse;min-width:0;width:100%;font-size:12px;table-layout:fixed;}
+  table.vlsm th,table.vlsm td{border:1px solid var(--line);padding:4px 4px;text-align:center;}
+  table.vlsm thead th{background:#eef4f9;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);font-weight:600;}
+  table.vlsm td.name{text-align:left;font-weight:600;white-space:nowrap;}
+  table.vlsm td.hosts{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  table.vlsm td.auto{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink-soft);background:#f6f9fc;}
+  table.vlsm input[data-f]{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;border:1px solid var(--line);
+    border-radius:4px;padding:4px 2px;width:100%;max-width:112px;text-align:center;outline:none;background:#fff;color:var(--ink);}
+  table.vlsm input.pfx{max-width:44px;}
+  table.vlsm input[data-f]:focus{border-color:var(--amber);box-shadow:0 0 0 2px #fdf1dc;}
+  tr.startsep td{background:#f6f9fc;border-top:1px dashed #cfe0ef;border-bottom:1px dashed #cfe0ef;padding:8px 10px;text-align:left;}
+  .sepstart{font-size:12px;color:var(--ink-soft);margin-bottom:7px;}
+  .sepstart.filled{color:var(--blue);}
+  .sepstart b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700;color:var(--blue);}
+  .sepnote{color:var(--ink-soft);font-size:11px;}
+  .sepwait{color:var(--ink-soft);font-style:italic;}
+  .maskbuilder{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;}
+  .mlabel{color:var(--ink-soft);}
+  .mbits{display:inline-flex;align-items:center;}
+  .mgrp{display:inline-flex;}
+  .mdot{width:8px;text-align:center;font-weight:800;color:var(--ink);}
+  .mbit{width:17px;height:22px;display:inline-flex;align-items:center;justify-content:center;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;border:1px solid var(--line);
+    border-right:none;background:#fff;color:var(--ink);padding:0;}
+  .mgrp .mbit:last-child{border-right:1px solid var(--line);}
+  .mbit.fixed{background:#eef4f9;color:var(--blue);}
+  input.mbit{text-align:center;outline:none;border-radius:0;}
+  input.mbit[readonly]{cursor:default;}
+  input.mbit[readonly]:focus{box-shadow:none;}
+  input.mbit:focus{box-shadow:inset 0 0 0 2px var(--amber);z-index:1;position:relative;}
+  input.mbit.subnetbit{background:var(--purple-bg);color:var(--purple);font-weight:700;}
+  .mread{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);white-space:nowrap;}
+  .mread b{color:var(--purple);}
+  table.vlsm input.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}
+  table.vlsm input.bad{border-color:var(--bad);background:var(--bad-bg);color:var(--bad);}
+
+  .feedback{margin-top:20px;padding:12px 16px;border-radius:8px;font-size:14px;display:none;}
+  .feedback.show{display:block;}
+  .feedback.pass{background:var(--ok-bg);border:1px solid var(--ok);color:var(--ok);}
+  .feedback.fail{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad);}
+
+  .maptitle{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--blue);margin:22px 0 8px;display:none;}
+  .maptitle.show{display:block;}
+  .allocmap{display:none;border:1px solid var(--line);border-radius:8px;overflow:hidden;height:56px;}
+  .allocmap.show{display:flex;}
+  .allocblock{display:flex;flex-direction:column;justify-content:center;align-items:center;border-right:1px solid rgba(24,36,48,.15);
+    font-size:11px;line-height:1.25;overflow:hidden;padding:2px;text-align:center;}
+  .allocblock:last-child{border-right:none;}
+  .allocblock b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;}
+  .allocblock.free{background:repeating-linear-gradient(45deg,#eef2f6,#eef2f6 6px,#e3e9ef 6px,#e3e9ef 12px);color:var(--ink-soft);}
+
+  details.steps{margin-top:24px;border:1px solid var(--line);border-radius:8px;padding:0 16px;}
+  details.steps summary{cursor:pointer;padding:12px 0;font-weight:600;font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);}
+  details.steps ol{margin:0 0 14px;padding-left:20px;font-size:13px;}
+  details.steps li{margin-bottom:6px;}
+  details.steps code{background:#f1f5f9;padding:1px 5px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
+  .footnote{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:22px;}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="titlebar">
+    <h1>VLSM Practice<span class="sub">Variable-Length Subnet Masking · allocate largest first</span></h1>
+    <div class="stat">Solved: <b id="solvedCount">0</b></div>
+  </div>
+
+  <div class="toolbar">
+    <label class="sel">Difficulty</label>
+    <select id="difficulty">
+      <option value="easy">Easy — /24 base, 3 subnets</option>
+      <option value="medium" selected>Medium — /23 base, 4 subnets</option>
+      <option value="hard">Hard — /22 base, 6 subnets</option>
+    </select>
+    <button id="newBtn">New scenario</button>
+    <div class="spacer"></div>
+    <button class="ghost" id="revealBtn">Reveal answers</button>
+    <button class="primary" id="checkBtn">Check my work</button>
+  </div>
+
+  <div class="given">
+    <div class="field"><span class="lbl">Base network</span><span class="val" id="baseNet">—</span></div>
+    <div class="field grow"><span class="lbl">Host requirements — sort largest → smallest</span><span class="reqlist" id="reqList"></span></div>
+  </div>
+
+  <div class="basemask">
+    <div class="bm-top">
+      <span class="lbl">Base mask (binary) — type 1 in a host bit to borrow it as a subnet bit</span>
+      <span class="bm-legend">
+        <span class="lg"><i class="sw sw-net"></i>network</span>
+        <span class="lg"><i class="sw sw-host"></i>host</span>
+        <span class="lg"><i class="sw sw-sub"></i>subnet bits</span>
+      </span>
+    </div>
+    <div class="bm-body">
+      <div class="mbits" id="baseMaskBits"></div>
+      <span class="mread" id="baseMaskRead"></span>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <table class="vlsm">
+      <thead><tr>
+        <th>Subnet</th><th>Hosts<br>needed</th><th>Prefix<br>(/n)</th>
+        <th>Usable<br>2ⁿ&minus;2</th><th>Subnet mask</th><th>Network<br>address</th>
+        <th>First<br>usable</th><th>Last<br>usable</th><th>Broadcast</th>
+      </tr></thead>
+      <tbody id="vbody"></tbody>
+    </table>
+  </div>
+
+  <div class="maptitle" id="mapTitle">Allocation map — how the base block is carved up</div>
+  <div class="allocmap" id="allocMap"></div>
+
+  <div class="feedback" id="feedback"></div>
+
+  <details class="steps">
+    <summary>Method — how to work VLSM</summary>
+    <ol>
+      <li><b>Sort</b> the host requirements from largest to smallest — biggest blocks get allocated first so everything stays aligned.</li>
+      <li>For each subnet, find the host bits <code>n</code> where <code>2ⁿ − 2 ≥ hosts needed</code>. The prefix is <code>/(32 − n)</code> and the block holds <code>2ⁿ</code> addresses.</li>
+      <li>Allocate blocks back-to-back from the base network. Each subnet's <b>network</b> is the previous subnet's broadcast + 1.</li>
+      <li>For each block: <b>broadcast</b> = network + blocksize − 1; <b>first usable</b> = network + 1; <b>last usable</b> = broadcast − 1.</li>
+    </ol>
+  </details>
+
+  <div class="footnote">Work out a subnet's <b>broadcast</b> correctly to reveal the next subnet's start. In each separator, <b>type 1</b> into the base mask to borrow host bits — borrowed bits shade <span style="color:var(--purple);font-weight:700;">purple</span> and the readout shows the prefix and how many hosts the remaining host bits hold. Then <b>Check my work</b>.</div>
+</div>
+
+<script>
+(function(){
+  const NAME_POOL=["Sales","Engineering","Marketing","Finance","IT","HR","Operations",
+    "Support","Warehouse","Guest Wi-Fi","Servers","VoIP","R&D","Logistics","WAN Link"];
+  const PALETTE=["#cfe8d6","#cfe0f2","#f6d8d4","#f3e6c4","#dfd3ef","#cdeceb","#f0d9e6","#e3ecd2"];
+  const FIELDS=["prefix","mask","network","first","last","broadcast"];
+
+  const sel=document.getElementById('difficulty');
+  const vbody=document.getElementById('vbody');
+  const fb=document.getElementById('feedback');
+  let state=null, cells=[], solved=0;
+
+  const randInt=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+  const choice=a=>a[Math.floor(Math.random()*a.length)];
+  const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=randInt(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+  const ipToInt=o=>o[0]*16777216+o[1]*65536+o[2]*256+o[3];
+  const intToIp=n=>{n=n>>>0;return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.');};
+  const prefixToMask=p=>intToIp(p===0?0:(0xFFFFFFFF<<(32-p))>>>0);
+  const hostBitsFor=h=>{let hb=1;while(Math.pow(2,hb)-2<h)hb++;return hb;};
+
+  function genBase(basePrefix){
+    const block=Math.pow(2,32-basePrefix), thirdStep=block/256;
+    const fam=choice(['10','172','192']);
+    let a,b;
+    if(fam==='192'){a=192;b=168;}
+    else if(fam==='172'){a=172;b=randInt(16,31);}
+    else {a=10;b=randInt(0,255);}
+    const c=randInt(0,Math.floor((256-thirdStep)/thirdStep))*thirdStep;
+    return ipToInt([a,b,c,0]);
+  }
+
+  function generate(){
+    const diff=sel.value;
+    let basePrefix,count;
+    if(diff==='easy'){basePrefix=24;count=3;}
+    else if(diff==='hard'){basePrefix=22;count=6;}
+    else {basePrefix=23;count=4;}
+    const baseSize=Math.pow(2,32-basePrefix);
+    const cap=Math.min(120,baseSize/2-2);
+
+    let items=null;
+    for(let attempt=0;attempt<800;attempt++){
+      const hs=[];for(let i=0;i<count;i++)hs.push(randInt(2,cap));
+      const cand=hs.map(h=>({hosts:h,hbits:hostBitsFor(h)}));
+      cand.sort((a,b)=>b.hbits-a.hbits||b.hosts-a.hosts);
+      const total=cand.reduce((s,r)=>s+Math.pow(2,r.hbits),0);
+      if(total<=baseSize){items=cand;break;}
+    }
+    if(!items){items=[{hosts:50,hbits:6},{hosts:20,hbits:5},{hosts:10,hbits:4}];basePrefix=24;}
+
+    const baseInt=genBase(basePrefix);
+    const names=shuffle(NAME_POOL).slice(0,items.length);
+    let cur=baseInt;
+    const subnets=items.map((r,i)=>{
+      const size=Math.pow(2,r.hbits),prefix=32-r.hbits,network=cur,broadcast=cur+size-1;
+      const s={name:names[i],hosts:r.hosts,prefix,size,
+        mask:prefixToMask(prefix),network:intToIp(network),
+        first:intToIp(network+1),last:intToIp(broadcast-1),broadcast:intToIp(broadcast)};
+      cur+=size;return s;
+    });
+    const used=cur-baseInt;
+    state={basePrefix,baseInt,baseNet:intToIp(baseInt),baseSize,used,
+      given:shuffle(subnets.map(s=>({name:s.name,hosts:s.hosts}))),subnets};
+    render();
+  }
+
+  function render(){
+    document.getElementById('baseNet').textContent=state.baseNet+' /'+state.basePrefix;
+    const rl=document.getElementById('reqList');rl.innerHTML='';
+    state.given.forEach(g=>{
+      const c=document.createElement('span');c.className='chip';
+      c.innerHTML=g.name+': <b>'+g.hosts+'</b> hosts';rl.appendChild(c);
+    });
+    buildBaseMask();
+
+    vbody.innerHTML='';cells=[];
+    state.subnets.forEach((s,idx)=>{
+      const tr=document.createElement('tr');
+      const ref={};
+      let html='<td class="name">'+s.name+'</td><td class="hosts">'+s.hosts+'</td>';
+      html+='<td><input class="pfx" data-f="prefix" maxlength="3" inputmode="numeric" placeholder="/n"></td>';
+      html+='<td class="auto" data-usable>&mdash;</td>';
+      html+='<td><input data-f="mask" placeholder="255.255.___.___"></td>';
+      html+='<td><input data-f="network" placeholder="___.___.___.___"></td>';
+      html+='<td><input data-f="first" placeholder="___.___.___.___"></td>';
+      html+='<td><input data-f="last" placeholder="___.___.___.___"></td>';
+      html+='<td><input data-f="broadcast" placeholder="___.___.___.___"></td>';
+      tr.innerHTML=html;vbody.appendChild(tr);
+      tr.querySelectorAll('input[data-f]').forEach(inp=>{ref[inp.dataset.f]=inp;});
+      ref._usable=tr.querySelector('[data-usable]');
+      // live usable from entered prefix
+      ref.prefix.addEventListener('input',()=>{
+        ref.prefix.classList.remove('ok','bad');
+        const p=parseInt(ref.prefix.value.replace(/[^\d]/g,''),10);
+        if(p>=1&&p<=32){const u=Math.max(0,Math.pow(2,32-p)-2);ref._usable.textContent=u.toLocaleString('en-US');}
+        else ref._usable.innerHTML='&mdash;';
+        if(ref._mb) ref._mb.setLocked((p>=1&&p<=31)?p:state.basePrefix);
+      });
+      FIELDS.forEach(f=>ref[f].addEventListener('input',()=>ref[f].classList.remove('ok','bad')));
+      ref.broadcast.addEventListener('input',updateStarts);
+      cells.push(ref);
+
+      // separator: reveals the NEXT subnet's start (once the broadcast above is solved)
+      // and holds a base-mask bit-borrowing builder for that subnet
+      if(idx<state.subnets.length-1){
+        const sep=document.createElement('tr');sep.className='startsep';
+        const td=document.createElement('td');td.colSpan=9;
+        const startEl=document.createElement('div');startEl.className='sepstart';
+        const mb=buildMaskBuilder(state.basePrefix);
+        td.appendChild(startEl);td.appendChild(mb.el);
+        sep.appendChild(td);vbody.appendChild(sep);
+        ref._sepStart=startEl;ref._mb=mb;
+      }
+    });
+
+    updateStarts();
+    hideMap();hideFeedback();
+  }
+
+  function updateStarts(){
+    if(!state) return;
+    for(let k=0;k<cells.length-1;k++){
+      const ref=cells[k], el=ref._sepStart;
+      if(!el) continue;
+      const got=norm(ref.broadcast.value);
+      if(got!=='' && got===state.subnets[k].broadcast){
+        el.className='sepstart filled';
+        el.innerHTML='\u21B3 next subnet starts at <b>'+state.subnets[k+1].network+'</b> <span class="sepnote">(broadcast above + 1)</span>';
+      } else {
+        el.className='sepstart';
+        el.innerHTML='<span class="sepwait">work out the broadcast above to reveal the next starting network</span>';
+      }
+    }
+  }
+
+  function buildBaseMask(){
+    const bp=state.basePrefix;
+    const wrap=document.getElementById('baseMaskBits');wrap.innerHTML='';
+    const readout=document.getElementById('baseMaskRead');
+    const editables=[];
+    for(let o=0;o<4;o++){
+      const grp=document.createElement('span');grp.className='mgrp';
+      for(let b=0;b<8;b++){
+        const i=o*8+b;
+        if(i<bp){
+          const sp=document.createElement('span');sp.className='mbit bm-net';sp.textContent='1';sp.title='network bit';
+          grp.appendChild(sp);
+        } else {
+          const inp=document.createElement('input');inp.className='mbit bm-host';inp.maxLength=1;inp.value='0';inp.dataset.i=i;
+          grp.appendChild(inp);editables.push(inp);
+        }
+      }
+      wrap.appendChild(grp);
+      if(o<3){const dot=document.createElement('span');dot.className='mdot';dot.textContent='.';wrap.appendChild(dot);}
+    }
+    function recompute(){
+      let borrowed=0;
+      editables.forEach(inp=>{
+        if(inp.value==='1'){borrowed++;inp.classList.add('bm-sub');inp.classList.remove('bm-host');}
+        else {inp.classList.remove('bm-sub');inp.classList.add('bm-host');}
+      });
+      const prefix=bp+borrowed, hostBits=32-prefix, hosts=Math.max(0,Math.pow(2,hostBits)-2), subnets=Math.pow(2,borrowed);
+      readout.innerHTML='\u2192 /'+prefix+' \u00B7 <b>'+borrowed+'</b> subnet bits \u00B7 <b>'+subnets.toLocaleString('en-US')+'</b> subnets \u00B7 <b>'+hosts.toLocaleString('en-US')+'</b> hosts/subnet';
+    }
+    editables.forEach((inp,idx)=>{
+      inp.addEventListener('focus',()=>inp.select());
+      inp.addEventListener('input',()=>{
+        const v=inp.value.replace(/[^01]/g,'').slice(-1);inp.value=(v===''?'0':v);
+        recompute();
+        if(v!==''&&idx<editables.length-1) editables[idx+1].focus();
+      });
+    });
+    recompute();
+  }
+
+  function buildMaskBuilder(initialLocked){
+    const wrap=document.createElement('div');wrap.className='maskbuilder';
+    const label=document.createElement('span');label.className='mlabel';
+    const bitsWrap=document.createElement('div');bitsWrap.className='mbits';
+    const inputs=[];
+    for(let o=0;o<4;o++){
+      const grp=document.createElement('span');grp.className='mgrp';
+      for(let b=0;b<8;b++){
+        const inp=document.createElement('input');inp.className='mbit';inp.maxLength=1;inp.dataset.i=(o*8+b);
+        grp.appendChild(inp);inputs.push(inp);
+      }
+      bitsWrap.appendChild(grp);
+      if(o<3){const dot=document.createElement('span');dot.className='mdot';dot.textContent='.';bitsWrap.appendChild(dot);}
+    }
+    const readout=document.createElement('span');readout.className='mread';
+    wrap.appendChild(label);wrap.appendChild(bitsWrap);wrap.appendChild(readout);
+
+    let locked=initialLocked;
+
+    function applyLock(){
+      inputs.forEach((inp,i)=>{
+        inp.classList.remove('fixed','subnetbit');
+        if(i<locked){ inp.value='1'; inp.readOnly=true; inp.tabIndex=-1; inp.classList.add('fixed'); inp.title='fixed network bit (from the subnet above)'; }
+        else { inp.readOnly=false; inp.tabIndex=0; inp.title=''; if(inp.value!=='1'&&inp.value!=='0') inp.value='0'; }
+      });
+    }
+    function recompute(){
+      let borrowed=0;
+      inputs.forEach((inp,i)=>{
+        if(i<locked) return;
+        if(inp.value==='1'){borrowed++;inp.classList.add('subnetbit');}
+        else inp.classList.remove('subnetbit');
+      });
+      const prefix=locked+borrowed, hostBits=32-prefix, hosts=Math.max(0,Math.pow(2,hostBits)-2);
+      label.textContent='From /'+locked+' — type 1 to borrow host bits:';
+      readout.innerHTML=' \u2192 /'+prefix+' \u00B7 <b>'+hosts.toLocaleString('en-US')+'</b> hosts \u00B7 '+hostBits+' host bits left';
+    }
+
+    inputs.forEach((inp,idx)=>{
+      inp.addEventListener('focus',()=>{ if(!inp.readOnly) inp.select(); });
+      inp.addEventListener('input',()=>{
+        if(inp.readOnly){ inp.value='1'; return; }
+        const v=inp.value.replace(/[^01]/g,'').slice(-1);inp.value=(v===''?'0':v);
+        recompute();
+        if(v!==''){ for(let j=idx+1;j<32;j++){ if(!inputs[j].readOnly){inputs[j].focus();break;} } }
+      });
+    });
+
+    applyLock();recompute();
+    return {
+      el:wrap,
+      setLocked(p){ locked=p; inputs.forEach((inp,i)=>{ if(i>=p) inp.value='0'; }); applyLock(); recompute(); },
+      setBorrow(n){ inputs.forEach((inp,i)=>{ if(i>=locked) inp.value=(i<locked+n?'1':'0'); }); recompute(); }
+    };
+  }
+
+  const norm=s=>s.trim().replace(/\s+/g,'');
+  const normPfx=s=>s.replace(/[^\d]/g,'');
+
+  function check(){
+    if(!state)return;
+    let wrong=0,blank=0,total=0;
+    state.subnets.forEach((s,idx)=>{
+      const ref=cells[idx];
+      FIELDS.forEach(f=>{
+        total++;
+        const inp=ref[f];inp.classList.remove('ok','bad');
+        const want=f==='prefix'?String(s.prefix):s[f];
+        const got=f==='prefix'?normPfx(inp.value):norm(inp.value);
+        if(got===''){blank++;inp.classList.add('bad');inp.title='Correct: '+want;}
+        else if(got===want){inp.classList.add('ok');inp.title='';}
+        else {wrong++;inp.classList.add('bad');inp.title='Correct: '+want;}
+      });
+    });
+    if(wrong===0&&blank===0){
+      showFeedback(true,'All correct — the base '+state.baseNet+'/'+state.basePrefix+' is carved into '+state.subnets.length+' subnets with no overlap.');
+      solved++;document.getElementById('solvedCount').textContent=solved;
+      renderMap();
+    } else {
+      const bits=[];if(wrong)bits.push(wrong+' incorrect');if(blank)bits.push(blank+' blank');
+      showFeedback(false,bits.join(' · ')+'. Hover a red cell to see its correct value, or use Reveal. Remember: allocate largest first.');
+    }
+  }
+
+  function reveal(){
+    if(!state)return;
+    state.subnets.forEach((s,idx)=>{
+      const ref=cells[idx];
+      ref.prefix.value='/'+s.prefix;
+      const u=Math.max(0,Math.pow(2,32-s.prefix)-2);ref._usable.textContent=u.toLocaleString('en-US');
+      ref.mask.value=s.mask;ref.network.value=s.network;ref.first.value=s.first;ref.last.value=s.last;ref.broadcast.value=s.broadcast;
+      FIELDS.forEach(f=>{ref[f].classList.remove('bad');ref[f].classList.add('ok');ref[f].title='';});
+    });
+    cells.forEach((ref,k)=>{ if(ref._mb){ ref._mb.setLocked(state.subnets[k].prefix); ref._mb.setBorrow(state.subnets[k+1].prefix-state.subnets[k].prefix); } });
+    updateStarts();
+    renderMap();
+    showFeedback(true,'Answers filled in. The allocation map below shows how the block is divided.');
+  }
+
+  function renderMap(){
+    const map=document.getElementById('allocMap');map.innerHTML='';
+    state.subnets.forEach((s,i)=>{
+      const d=document.createElement('div');d.className='allocblock';
+      d.style.background=PALETTE[i%PALETTE.length];
+      d.style.flex=s.size+' 0 0';
+      d.innerHTML='<span>'+s.name+'</span><b>'+s.network+'/'+s.prefix+'</b>';
+      d.title=s.name+'  '+s.network+'/'+s.prefix+'  ('+s.size+' addresses, '+s.hosts+' needed)';
+      map.appendChild(d);
+    });
+    const free=state.baseSize-state.used;
+    if(free>0){
+      const d=document.createElement('div');d.className='allocblock free';d.style.flex=free+' 0 0';
+      d.innerHTML='<span>free</span><b>'+free+'</b>';map.appendChild(d);
+    }
+    document.getElementById('mapTitle').classList.add('show');
+    map.classList.add('show');
+  }
+  function hideMap(){document.getElementById('mapTitle').classList.remove('show');document.getElementById('allocMap').classList.remove('show');}
+
+  function showFeedback(pass,msg){fb.textContent=msg;fb.className='feedback show '+(pass?'pass':'fail');}
+  function hideFeedback(){fb.className='feedback';}
+
+  document.getElementById('newBtn').addEventListener('click',generate);
+  document.getElementById('checkBtn').addEventListener('click',check);
+  document.getElementById('revealBtn').addEventListener('click',reveal);
+  sel.addEventListener('change',generate);
+
+  generate();
+})();
+</script>
+</body>
+</html>
